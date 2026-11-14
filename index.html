@@ -585,7 +585,7 @@ function updateHands(dt){
     // sem desenhar mãos artificiais por cima.
     h.g.visible=S.skeleton&&h.vis;h.pinchDown=false;
     if(!h.vis){h.was=false;h.laser.visible=false;h.dot.visible=false;if(h.pinch){h.pinch=false}h.holding=h.holding;return}
-    const k=h.was?0.55:1;
+    const k=h.was?1-Math.exp(-dt*22):1;
     for(let i=0;i<21;i++){h.cur[i].lerp(h.tgt[i],k);h.w[i].copy(h.cur[i]);head.localToWorld(h.w[i])}
     h.prS=h.was?h.prS*0.5+h.pr*0.5:h.pr;h.was=true;
     const wasP=h.pinch;
@@ -615,7 +615,7 @@ function updateHands(dt){
 async function initHands(){
   const v=$('cam');
   try{
-    const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:640},height:{ideal:480}},audio:false});
+    const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:960},height:{ideal:540}},audio:false});
     v.srcObject=st;v.muted=true;await v.play();hasCam=true;
     if(passthroughTexture)passthroughTexture.dispose();
     passthroughTexture=new THREE.VideoTexture(v);
@@ -629,12 +629,13 @@ async function initHands(){
   if(!window.Hands){handStatus='modelo de mãos não carregou (internet?)';menuP.dirty=true;return}
   handStatus='carregando modelo…';menuP.dirty=true;
   const mp=new Hands({locateFile:function(f){return 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/'+f}});
-  mp.setOptions({maxNumHands:2,modelComplexity:0,minDetectionConfidence:0.6,minTrackingConfidence:0.5});
+  mp.setOptions({maxNumHands:2,modelComplexity:1,minDetectionConfidence:0.65,minTrackingConfidence:0.65});
   mp.onResults(function(r){if(handStatus!=='ativo'){handStatus='ativo';menuP.dirty=true}onHandResults(r)});
-  let busy=false;
+  let busy=false,lastInfer=0;
   (async function pump(){
-    if(!busy&&v.readyState>=2&&v.videoWidth){
-      camAspect=v.videoWidth/v.videoHeight;busy=true;
+    const now=performance.now();
+    if(!busy&&now-lastInfer>=33&&v.readyState>=2&&v.videoWidth){
+      camAspect=v.videoWidth/v.videoHeight;busy=true;lastInfer=now;
       try{await mp.send({image:v})}catch(e){handStatus='erro no rastreamento';}
       busy=false;
     }
