@@ -552,7 +552,7 @@ function updateHands(dt){
     h.vis=(now-h.last)<300&&hasCam;
     // Rastreamento invisível: as mãos reais aparecem pela imagem da câmera,
     // sem desenhar mãos artificiais por cima.
-    h.g.visible=virtualWorld&&h.vis;h.pinchDown=false;
+    h.g.visible=S.skeleton&&h.vis;h.pinchDown=false;
     if(!h.vis){h.was=false;h.laser.visible=false;h.dot.visible=false;if(h.pinch){h.pinch=false}h.holding=h.holding;return}
     const k=h.was?0.55:1;
     for(let i=0;i<21;i++){h.cur[i].lerp(h.tgt[i],k);h.w[i].copy(h.cur[i]);head.localToWorld(h.w[i])}
@@ -637,7 +637,17 @@ function interact(dt){
   head.getWorldPosition(gz.o);gz.d.set(0,0,-1).applyQuaternion(head.quaternion);
   function hit(o,d){let best=null;panels.forEach(function(p){const r=p.hit(o,d);if(r&&(!best||r.t<best.t)){best=r;r.p=p}});return best}
   const anyHand=hands.some(function(h){return h.vis});
-  hands.forEach(function(h){h.hit=h.vis?hit(h.ro,h.rd):null});
+  hands.forEach(function(h){
+    h.hit=h.vis?hit(h.ro,h.rd):null;
+    const showRay=h.vis&&tabsP.mesh.visible;
+    if(showRay){
+      const end=h.hit?h.hit.point:tmpV.copy(h.ro).addScaledVector(h.rd,2.0);
+      const a=h.laser.geometry.attributes.position.array;
+      a[0]=h.ro.x;a[1]=h.ro.y;a[2]=h.ro.z;a[3]=end.x;a[4]=end.y;a[5]=end.z;
+      h.laser.geometry.attributes.position.needsUpdate=true;
+      h.laser.visible=true;h.dot.position.copy(end);h.dot.visible=true;
+    }else{h.laser.visible=false;h.dot.visible=false;}
+  });
   const g=hit(gz.o,gz.d);
   panels.forEach(function(p){
     let id=null;
@@ -682,8 +692,8 @@ function interact(dt){
   hands.forEach(function(h){
     // No passthrough aparecem as mãos reais da câmera; na sala virtual,
     // mostramos o rastreamento 3D aproximado das mãos.
-    h.laser.visible=false;h.dot.visible=false;h.icon.visible=false;
-    h.g.visible=virtualWorld&&h.vis;
+    h.icon.visible=false;
+    h.g.visible=S.skeleton&&h.vis;
   });
 }
 
