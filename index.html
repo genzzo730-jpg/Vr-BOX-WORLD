@@ -32,7 +32,7 @@ video#cam{position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-eve
     <li>Toque no botão, permita <b>câmera</b> e <b>sensores de movimento</b>.</li>
     <li>Coloque o celular deitado no VR Box, com a <b>câmera traseira livre</b>. O fundo mostrará a imagem ao vivo do ambiente ao redor.</li>
     <li>Permita a câmera para ver o ambiente real como fundo e rastrear suas mãos. Estenda as mãos na frente: você verá o esqueleto das suas mãos. <b>Pinça</b> (polegar + indicador) = clicar/pegar.</li>
-    <li><b>Segure a pinça</b> no vazio por 1 segundo para abrir o menu flutuante. Faça pinça novamente por 1 segundo para fechar. O menu acompanha a direção da cabeça.</li>
+    <li><b>Mão azul:</b> segure a pinça por 1 segundo para abrir/fechar o menu. <b>Mão rosa:</b> segure a pinça por 1 segundo para alternar entre a câmera real e uma sala virtual futurista. Na sala virtual, as mãos aparecem como rastreamento 3D aproximado.</li>
     <li>Sem mãos? Olhe para um botão por 1,4 s para clicar.</li>
   </ul>
   <button id="go">ENTRAR NA REALIDADE VIRTUAL</button>
@@ -102,6 +102,32 @@ head.add(camL,camR,camM);
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));
   environmentGroup.add(new THREE.Points(g,new THREE.PointsMaterial({color:0xffffff,size:0.18,sizeAttenuation:true,fog:false})));
   scene.add(environmentGroup);
+})();
+
+/* ---------- sala virtual futurista ---------- */
+let virtualWorld=false;
+const virtualRoom=new THREE.Group();
+(function buildVirtualRoom(){
+  const mat=(color,emissive,intensity)=>new THREE.MeshStandardMaterial({color:color,metalness:.55,roughness:.35,emissive:emissive||0x000000,emissiveIntensity:intensity||0});
+  const wall=mat(0x111a35),floor=mat(0x182344),blue=mat(0x167dff,0x0877ff,1.5),purple=mat(0x713cff,0x713cff,1.3),glass=new THREE.MeshBasicMaterial({color:0x183d78,transparent:true,opacity:.28,side:THREE.DoubleSide});
+  function box(w,h,d,m,x,y,z){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);virtualRoom.add(o);return o;}
+  box(9,.16,10,floor,0,-1.35,-.4);
+  box(9,5.5,.16,wall,0,1.35,-5.35);
+  box(.16,5.5,10,wall,-4.5,1.35,-.4);box(.16,5.5,10,wall,4.5,1.35,-.4);
+  box(9,.14,10,wall,0,4.1,-.4);
+  box(7.8,.025,.025,blue,0,-1.24,-5.22);box(.025,4.8,.025,purple,-4.38,1.3,-.4);box(.025,4.8,.025,blue,4.38,1.3,-.4);
+  for(let i=0;i<5;i++){
+    const x=-3.2+i*1.6;
+    const pane=new THREE.Mesh(new THREE.PlaneGeometry(1.25,2.5),glass);pane.position.set(x,1.45,-5.24);virtualRoom.add(pane);
+    box(1.3,.035,.035,i%2?purple:blue,x,.16,-5.19);
+  }
+  for(let i=0;i<4;i++){
+    const x=-3+i*2;box(.035,3.8,.035,i%2?blue:purple,x,1.2,-4.95);
+  }
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(1.05,.025,8,80),blue);ring.rotation.x=Math.PI/2;ring.position.set(0,-1.24,-.4);virtualRoom.add(ring);
+  const glow=new THREE.PointLight(0x397dff,1.8,12);glow.position.set(0,2.8,-2);virtualRoom.add(glow);
+  const ambient=new THREE.AmbientLight(0x899cff,.65);virtualRoom.add(ambient);
+  scene.add(virtualRoom);virtualRoom.visible=false;
 })();
 
 /* ---------- renderização estéreo com distorção de lente ---------- */
@@ -410,6 +436,13 @@ function placeInFront(p,dist,y){
 }
 function showTabs(){placeInFront(tabsP,1.05,rig.position.y-0.08);tabsP.mesh.visible=true;tabsP.dirty=true;beep(880,0.08,0.12);buzz(25)}
 function hideTabs(){tabsP.mesh.visible=false}
+function toggleVirtualWorld(){
+  virtualWorld=!virtualWorld;
+  if(virtualWorld){scene.background=new THREE.Color(0x050817);scene.fog=new THREE.Fog(0x050817,9,24);virtualRoom.visible=true;if(environmentGroup)environmentGroup.visible=false;}
+  else{scene.background=passthroughTexture||new THREE.Color(0x070a1c);scene.fog=null;virtualRoom.visible=false;if(environmentGroup)environmentGroup.visible=!passthroughTexture;}
+  hands.forEach(function(h){h.g.visible=virtualWorld;});
+  beep(virtualWorld?760:480,0.18,0.14);buzz(35);
+}
 function openTab(t){tab=t;hideTabs();setState('menu');placeInFront(menuP,1.75,rig.position.y+0.1);menuP.dirty=true}
 
 function setState(s){
@@ -491,7 +524,7 @@ function updateHands(dt){
     h.vis=(now-h.last)<300&&hasCam;
     // Rastreamento invisível: as mãos reais aparecem pela imagem da câmera,
     // sem desenhar mãos artificiais por cima.
-    h.g.visible=false;h.pinchDown=false;
+    h.g.visible=virtualWorld&&h.vis;h.pinchDown=false;
     if(!h.vis){h.was=false;h.laser.visible=false;h.dot.visible=false;if(h.pinch){h.pinch=false}h.holding=h.holding;return}
     const k=h.was?0.55:1;
     for(let i=0;i<21;i++){h.cur[i].lerp(h.tgt[i],k);h.w[i].copy(h.cur[i]);head.localToWorld(h.w[i])}
@@ -584,11 +617,14 @@ function interact(dt){
     if(!id&&!anyHand&&g&&g.p===p&&g.btn)id=g.btn.id;
     if(id!==p.hoverId){p.hoverId=id;p.dirty=true}
   });
-  hands.forEach(function(h){
+  hands.forEach(function(h,i){
     if(!h.vis){h.hold=0;return}
     if(h.pinchDown&&h.hit&&h.hit.btn)click(h.hit.p,h.hit.btn);
     const busy=!!(h.hit&&h.hit.btn)||!!h.holding;
-    if(h.pinch&&!busy&&!h.lock){
+    if(i===1){
+      if(h.pinch&&!busy&&!h.lock){h.hold+=dt;if(h.hold>=MENU_AT){h.lock=true;h.hold=0;toggleVirtualWorld();}}
+      else{h.hold=0;if(!h.pinch)h.lock=false}
+    }else if(h.pinch&&!busy&&!h.lock){
       h.hold+=dt;
       if(h.hold>=MENU_AT){h.lock=true;h.hold=0;if(tabsP.mesh.visible)hideTabs();else showTabs()}
     }else{h.hold=0;if(!h.pinch)h.lock=false}
@@ -616,9 +652,10 @@ function interact(dt){
   reticle.lookAt(gz.o);retFill.scale.setScalar(Math.max(0.001,prog));
   reticle.visible=!anyHand;
   hands.forEach(function(h){
-    // Não mostrar esqueleto, laser ou pontos falsos: somente as mãos captadas
-    // pela câmera traseira ficam visíveis no passthrough.
+    // No passthrough aparecem as mãos reais da câmera; na sala virtual,
+    // mostramos o rastreamento 3D aproximado das mãos.
     h.laser.visible=false;h.dot.visible=false;h.icon.visible=false;
+    h.g.visible=virtualWorld&&h.vis;
   });
 }
 
