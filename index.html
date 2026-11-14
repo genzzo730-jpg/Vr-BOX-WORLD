@@ -489,7 +489,9 @@ function updateHands(dt){
   const now=performance.now();
   hands.forEach(function(h){
     h.vis=(now-h.last)<300&&hasCam;
-    h.g.visible=h.vis;h.pinchDown=false;
+    // Rastreamento invisível: as mãos reais aparecem pela imagem da câmera,
+    // sem desenhar mãos artificiais por cima.
+    h.g.visible=false;h.pinchDown=false;
     if(!h.vis){h.was=false;h.laser.visible=false;h.dot.visible=false;if(h.pinch){h.pinch=false}h.holding=h.holding;return}
     const k=h.was?0.55:1;
     for(let i=0;i<21;i++){h.cur[i].lerp(h.tgt[i],k);h.w[i].copy(h.cur[i]);head.localToWorld(h.w[i])}
@@ -614,15 +616,9 @@ function interact(dt){
   reticle.lookAt(gz.o);retFill.scale.setScalar(Math.max(0.001,prog));
   reticle.visible=!anyHand;
   hands.forEach(function(h){
-    const show=h.vis&&state!=='blocks';
-    h.laser.visible=show;h.dot.visible=show&&!!h.hit;
-    if(show){
-      const end=h.hit?h.hit.point:tmpV.copy(h.ro).addScaledVector(h.rd,1.2);
-      const a=h.laser.geometry.attributes.position.array;
-      a[0]=h.ro.x;a[1]=h.ro.y;a[2]=h.ro.z;a[3]=end.x;a[4]=end.y;a[5]=end.z;
-      h.laser.geometry.attributes.position.needsUpdate=true;
-      if(h.hit)h.dot.position.copy(h.hit.point);
-    }
+    // Não mostrar esqueleto, laser ou pontos falsos: somente as mãos captadas
+    // pela câmera traseira ficam visíveis no passthrough.
+    h.laser.visible=false;h.dot.visible=false;h.icon.visible=false;
   });
 }
 
