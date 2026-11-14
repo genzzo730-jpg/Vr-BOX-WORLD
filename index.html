@@ -230,7 +230,7 @@ const GAMES=[
 const menuP=new Panel(1.8,1.125,1280,800);menuP.mesh.position.set(0,1.3,-1.75);
 const hudP=new Panel(0.9,0.3,900,300);hudP.mesh.position.set(-0.95,1.45,-1.25);hudP.mesh.rotation.y=0.65;
 const endP=new Panel(1.0,0.6,800,480);endP.mesh.position.set(0,1.35,-1.1);
-const tabsP=new Panel(1.95,0.34,1560,272);tabsP.mesh.visible=false;
+const tabsP=new Panel(2.35,0.52,1920,424);tabsP.mesh.visible=false;
 scene.add(menuP.mesh,hudP.mesh,endP.mesh,tabsP.mesh);
 
 function toggleBtn(p,c,id,y,label,key,hint){
@@ -333,27 +333,68 @@ if(navigator.getBattery){
   }).catch(function(){});
 }
 function drawTabs(c,p){
-  rr(c,0,0,p.pw,p.ph,48);c.fillStyle='rgba(10,14,34,0.96)';c.fill();
-  c.strokeStyle='rgba(255,255,255,.24)';c.lineWidth=3;c.stroke();
+  // Menu universal flutuante: vidro escuro, contorno suave e acento azul-violeta.
+  const bg=c.createLinearGradient(0,0,0,p.ph);
+  bg.addColorStop(0,'rgba(34,39,61,0.97)');
+  bg.addColorStop(1,'rgba(9,12,27,0.98)');
+  rr(c,0,0,p.pw,p.ph,54);c.fillStyle=bg;c.fill();
+  c.save();c.shadowColor='rgba(93,125,255,.28)';c.shadowBlur=24;
+  c.strokeStyle='rgba(210,220,255,.28)';c.lineWidth=3;c.stroke();c.restore();
 
-  // Faixa superior: informações rápidas no estilo do menu universal VR.
+  // Cabeçalho e indicadores do sistema.
   c.textBaseline='middle';c.textAlign='left';
-  c.fillStyle='#fff';c.font='700 30px system-ui';
-  c.fillText('●  Perfil',38,48);
-  c.fillStyle=COL.dim;c.font='600 27px system-ui';
-  c.fillText('Visitante',170,48);
-  c.fillText(new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),610,48);
-  c.fillText('🔋 '+batteryText,820,48);
-  c.fillText('●  Notificações: 0',1190,48);
+  c.fillStyle='#f7f8ff';c.font='800 32px system-ui';
+  c.fillText('VR BOX WORLD',38,55);
+  c.fillStyle='rgba(190,200,230,.72)';c.font='500 20px system-ui';
+  c.fillText('MENU UNIVERSAL',40,83);
 
-  const items=[['biblioteca','▦  Biblioteca',300],['jogos','▶  Jogos',260],['config','⚙  Configurações',340]];
+  // Perfil com avatar.
+  c.beginPath();c.arc(390,58,25,0,Math.PI*2);c.fillStyle='#6c8cff';c.fill();
+  c.fillStyle='#fff';c.font='700 22px system-ui';c.textAlign='center';c.fillText('V',390,59);
+  c.textAlign='left';c.fillStyle='#fff';c.font='700 25px system-ui';c.fillText('Visitante',430,51);
+  c.fillStyle='rgba(190,200,230,.72)';c.font='500 19px system-ui';c.fillText('Perfil',430,78);
+
+  // Hora central e status à direita.
+  c.textAlign='center';c.fillStyle='#fff';c.font='700 29px system-ui';
+  c.fillText(new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),960,57);
+  c.textAlign='right';c.fillStyle='#dce4ff';c.font='600 21px system-ui';
+  c.fillText('●  Wi-Fi     ▰  '+batteryText+'     ◉  0',1870,57);
+
+  // Linha divisória.
+  c.beginPath();c.moveTo(34,112);c.lineTo(1886,112);
+  c.strokeStyle='rgba(255,255,255,.13)';c.lineWidth=2;c.stroke();
+
+  // Abas grandes, com ícones, fundo translúcido e seleção azul-violeta.
+  const items=[
+    ['biblioteca','▦','Biblioteca',300],
+    ['jogos','▶','Jogos',270],
+    ['config','⚙','Configurações',360]
+  ];
   let x=38;
   items.forEach(function(t){
-    B(p,c,'qt-'+t[0],x,105,t[2],112,t[1],function(){openTab(t[0])},{active:state==='menu'&&tab===t[0],font:'700 32px'});
-    x+=t[2]+20;
+    const active=state==='menu'&&tab===t[0];
+    const hv=p.hoverId==='qt-'+t[0];
+    const w=t[3],y=148,h=170;
+    rr(c,x,y,w,h,32);
+    if(active){
+      const g=c.createLinearGradient(x,y,x+w,y+h);
+      g.addColorStop(0,'#718cff');g.addColorStop(1,'#7656d8');
+      c.fillStyle=g;c.fill();
+      c.strokeStyle='rgba(255,255,255,.75)';c.lineWidth=3;c.stroke();
+    }else{
+      c.fillStyle=hv?'rgba(110,140,255,.38)':'rgba(255,255,255,.085)';c.fill();
+      c.strokeStyle='rgba(255,255,255,.12)';c.lineWidth=2;c.stroke();
+    }
+    c.textAlign='center';c.textBaseline='middle';
+    c.fillStyle='#fff';c.font='700 48px system-ui';c.fillText(t[1],x+w/2,y+55);
+    c.font='700 27px system-ui';c.fillText(t[2],x+w/2,y+119);
+    p.btns.push({id:'qt-'+t[0],x:x,y:y,w:w,h:h,fn:function(){openTab(t[0])}});
+    x+=w+22;
   });
-  B(p,c,'qt-rec',x,105,150,112,'⌖ Recentrar',function(){recenter()},{font:'700 27px'});x+=170;
-  B(p,c,'qt-x',x,105,110,112,'✕ Fechar',function(){hideTabs()},{font:'700 27px'});
+
+  // Ações rápidas no mesmo estilo visual.
+  B(p,c,'qt-rec',x,148,235,170,'⌖\nRecentralizar',function(){recenter()},{font:'700 26px'});x+=255;
+  B(p,c,'qt-x',x,148,170,170,'×\nFechar',function(){hideTabs()},{font:'700 29px'});
 }
 tabsP.draw=drawTabs;
 function placeInFront(p,dist,y){
@@ -701,7 +742,7 @@ function frame(t){
   if(state==='blocks')updateBlocks(dt);
   tapped=false;
   statT+=dt;if(statT>0.6){statT=0;if(state==='menu')menuP.dirty=true}
-  if(tabsP.mesh.visible)placeInFront(tabsP,1.05,rig.position.y-0.08);
+  if(tabsP.mesh.visible){placeInFront(tabsP,1.12,rig.position.y-0.08);tabsP.dirty=true;}
   [menuP,hudP,endP,tabsP].forEach(function(p){if(p.dirty&&p.mesh.visible)p.redraw()});
   render();
 }
