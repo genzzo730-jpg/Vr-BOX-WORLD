@@ -504,19 +504,27 @@ function makeHand(color){
     const tip=TIPS.indexOf(i)>=0;m.userData.tip=tip;m.scale.setScalar(tip?0.0105:0.0075);
     h.g.add(m);h.j.push(m);
   }
-  const pa=new Float32Array(BONES.length*2*3);
-  const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.BufferAttribute(pa,3));
-  h.line=new THREE.LineSegments(lg,new THREE.LineBasicMaterial({color:color,fog:false}));h.line.frustumCulled=false;h.g.add(h.line);
+  // Ossos luminosos: duas camadas dão o visual de raio-X da imagem.
+  const boneGeo=new THREE.CylinderGeometry(0.006,0.009,1,8);
+  const boneGlow=new THREE.MeshBasicMaterial({color:0x8ebaff,transparent:true,opacity:0.30,depthWrite:false});
+  const boneCore=new THREE.MeshBasicMaterial({color:0xf1f7ff,transparent:true,opacity:0.96,depthWrite:false});
+  h.bones=[];
+  BONES.forEach(function(){
+    const glow=new THREE.Mesh(boneGeo,boneGlow);
+    const core=new THREE.Mesh(boneGeo,boneCore);
+    h.g.add(glow,core);h.bones.push({glow:glow,core:core});
+  });
+  h.line={visible:true};
   h.ro=new V3();h.rd=new V3();h.pp=new V3();
   h.ic=document.createElement('canvas');h.ic.width=h.ic.height=128;h.ict=new THREE.CanvasTexture(h.ic);
   h.icon=new THREE.Sprite(new THREE.SpriteMaterial({map:h.ict,transparent:true,depthTest:false,fog:false}));
   h.icon.renderOrder=997;h.icon.visible=false;h.icon.scale.setScalar(0.001);h.iconS=0;h.lock=false;scene.add(h.icon);
   const lp=new Float32Array(6),lgeo=new THREE.BufferGeometry();lgeo.setAttribute('position',new THREE.BufferAttribute(lp,3));
-  h.laser=new THREE.Line(lgeo,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.7,fog:false}));h.laser.frustumCulled=false;h.laser.visible=false;scene.add(h.laser);
+  h.laser=new THREE.Line(lgeo,new THREE.LineBasicMaterial({color:0x9edcff,transparent:true,opacity:0.9,fog:false}));h.laser.frustumCulled=false;h.laser.visible=false;scene.add(h.laser);
   h.dot=new THREE.Mesh(sphGeo,new THREE.MeshBasicMaterial({color:0xffffff,fog:false,depthTest:false}));h.dot.scale.setScalar(0.011);h.dot.visible=false;h.dot.renderOrder=998;scene.add(h.dot);
   return h;
 }
-const hands=[makeHand(0xb8bec8),makeHand(0xb8bec8)];
+const hands=[makeHand(0xeaf4ff),makeHand(0xeaf4ff)];
 let camAspect=4/3;
 
 function onHandResults(r){
@@ -566,15 +574,18 @@ function updateHands(dt){
     h.rd.copy(h.pp).sub(h.ro).normalize();
     for(let i=0;i<21;i++){
       const m=h.j[i];m.position.copy(h.w[i]);
-      m.visible=S.skeleton||TIPS.indexOf(i)>=0&&(i===4||i===8);
-      m.material.color.setHex((i===4||i===8)&&h.pinch?0xffe066:h.color);
+      m.visible=S.skeleton;
+      m.material.color.setHex((i===4||i===8)&&h.pinch?0x9feaff:0xeaf4ff);
+      m.material.opacity=(i===4||i===8)?1:0.94;
     }
-    const a=h.line.geometry.attributes.position.array;
     BONES.forEach(function(b,i){
-      a[i*6]=h.w[b[0]].x;a[i*6+1]=h.w[b[0]].y;a[i*6+2]=h.w[b[0]].z;
-      a[i*6+3]=h.w[b[1]].x;a[i*6+4]=h.w[b[1]].y;a[i*6+5]=h.w[b[1]].z;
+      const a=h.w[b[0]],z=h.w[b[1]],delta=tmpV.copy(z).sub(a);
+      const len=delta.length(),mid=tmpA.copy(a).add(z).multiplyScalar(0.5);
+      const q=new THREE.Quaternion().setFromUnitVectors(new V3(0,1,0),delta.normalize());
+      const pair=h.bones[i];
+      [pair.glow,pair.core].forEach(function(mesh){mesh.position.copy(mid);mesh.quaternion.copy(q);mesh.scale.set(1,len,1);});
+      pair.glow.visible=pair.core.visible=S.skeleton;
     });
-    h.line.geometry.attributes.position.needsUpdate=true;h.line.visible=S.skeleton;
   });
 }
 
