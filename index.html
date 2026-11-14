@@ -524,13 +524,13 @@ function makeHand(color){
   h.j=[];
   for(let i=0;i<21;i++){
     const m=new THREE.Mesh(sphGeo,new THREE.MeshBasicMaterial({color:color,fog:false}));
-    const tip=TIPS.indexOf(i)>=0;m.userData.tip=tip;m.scale.setScalar(tip?0.0105:0.0075);
+    const tip=TIPS.indexOf(i)>=0;m.userData.tip=tip;m.scale.setScalar(tip?0.009:0.0055);
     h.g.add(m);h.j.push(m);
   }
   // Ossos luminosos: duas camadas dão o visual de raio-X da imagem.
-  const boneGeo=new THREE.CylinderGeometry(0.006,0.009,1,8);
-  const boneGlow=new THREE.MeshBasicMaterial({color:0x8ebaff,transparent:true,opacity:0.30,depthWrite:false});
-  const boneCore=new THREE.MeshBasicMaterial({color:0xf1f7ff,transparent:true,opacity:0.96,depthWrite:false});
+  const boneGeo=new THREE.CylinderGeometry(0.010,0.013,1,10);
+  const boneGlow=new THREE.MeshBasicMaterial({color:0x268cff,transparent:true,opacity:0.42,depthWrite:false});
+  const boneCore=new THREE.MeshBasicMaterial({color:0x78c7ff,transparent:true,opacity:0.92,depthWrite:false});
   h.bones=[];
   BONES.forEach(function(){
     const glow=new THREE.Mesh(boneGeo,boneGlow);
@@ -598,7 +598,7 @@ function updateHands(dt){
     for(let i=0;i<21;i++){
       const m=h.j[i];m.position.copy(h.w[i]);
       m.visible=S.skeleton;
-      m.material.color.setHex((i===4||i===8)&&h.pinch?0x9feaff:0xeaf4ff);
+      m.material.color.setHex((i===4||i===8)&&h.pinch?0xffffff:0x55baff);
       m.material.opacity=(i===4||i===8)?1:0.94;
     }
     BONES.forEach(function(b,i){
@@ -615,7 +615,7 @@ function updateHands(dt){
 async function initHands(){
   const v=$('cam');
   try{
-    const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:960},height:{ideal:540}},audio:false});
+    const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
     v.srcObject=st;v.muted=true;await v.play();hasCam=true;
     if(passthroughTexture)passthroughTexture.dispose();
     passthroughTexture=new THREE.VideoTexture(v);
