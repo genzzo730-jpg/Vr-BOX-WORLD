@@ -516,7 +516,7 @@ function makeHand(color){
   h.dot=new THREE.Mesh(sphGeo,new THREE.MeshBasicMaterial({color:0xffffff,fog:false,depthTest:false}));h.dot.scale.setScalar(0.011);h.dot.visible=false;h.dot.renderOrder=998;scene.add(h.dot);
   return h;
 }
-const hands=[makeHand(0x5ee0ff),makeHand(0xff6ad5)];
+const hands=[makeHand(0xb8bec8),makeHand(0xb8bec8)];
 let camAspect=4/3;
 
 function onHandResults(r){
