@@ -390,91 +390,77 @@ if(navigator.getBattery){
   }).catch(function(){});
 }
 function drawTabs(c,p){
-  // Layout inspirado diretamente na referência: barra superior, navegação lateral,
-  // cinco cartões centrais, painel de informações e atalhos inferiores.
-  const bg=c.createLinearGradient(0,0,0,p.ph);
-  bg.addColorStop(0,'rgba(8,19,48,.99)');bg.addColorStop(1,'rgba(3,7,20,.99)');
-  rr(c,0,0,p.pw,p.ph,42);c.fillStyle=bg;c.fill();
-  c.save();c.shadowColor='rgba(0,145,255,.5)';c.shadowBlur=28;
-  c.strokeStyle='rgba(58,169,255,.9)';c.lineWidth=4;c.stroke();c.restore();
+  // Interface flutuante inspirada no painel e na barra universal do Quest.
+  c.clearRect(0,0,p.pw,p.ph);
+  c.textBaseline='middle';
 
-  // Banner superior.
-  rr(c,390,34,1140,220,42);c.fillStyle='rgba(13,38,83,.92)';c.fill();
-  c.strokeStyle='rgba(69,177,255,.9)';c.lineWidth=3;c.stroke();
-  c.textAlign='left';c.textBaseline='middle';
-  c.fillStyle='#fff';c.font='800 94px system-ui';c.fillText('META',720,115);
-  c.fillStyle='#16aaff';c.fillText(' BOX',955,115);
-  c.fillStyle='#e3efff';c.font='600 28px system-ui';
-  c.fillText('VR  •  JOGOS  •  APLICATIVOS  •  CONFIGURAÇÕES',725,183);
-  c.textAlign='right';c.font='700 27px system-ui';c.fillStyle='#fff';
-  c.fillText(new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),1480,82);
-  c.fillStyle='#65e6a8';c.font='600 24px system-ui';
-  c.fillText(hasCam?'● Câmera ativa':'● Câmera desligada',1480,128);
-  c.fillStyle='#dceaff';c.fillText('▰ '+batteryText,1480,174);
+  // Painel superior de aplicativos, escuro e translúcido.
+  c.save();
+  c.shadowColor='rgba(0,0,0,.38)';c.shadowBlur=28;
+  rr(c,82,-70,1755,470,70);
+  c.fillStyle='rgba(8,15,25,.88)';c.fill();
+  c.strokeStyle='rgba(210,230,255,.12)';c.lineWidth=3;c.stroke();
+  c.restore();
 
-  // Navegação lateral.
-  rr(c,35,310,300,590,34);c.fillStyle='rgba(14,34,73,.94)';c.fill();
-  c.strokeStyle='rgba(73,157,255,.55)';c.lineWidth=2;c.stroke();
-  const side=[['⌂','Início','jogos'],['▦','Biblioteca','biblioteca'],['◷','Recentes','recentes'],['★','Favoritos','favoritos']];
-  side.forEach(function(t,i){
-    const y=345+i*128,active=(i===0&&state==='menu'&&tab==='jogos')||(i===1&&tab==='biblioteca');
-    rr(c,52,y,266,104,25);
-    c.fillStyle=active?'rgba(0,112,255,.78)':'rgba(255,255,255,.055)';c.fill();
-    if(active){c.strokeStyle='#65caff';c.lineWidth=3;c.stroke()}
-    c.textAlign='left';c.textBaseline='middle';c.fillStyle='#fff';
-    c.font='700 45px system-ui';c.fillText(t[0],78,y+51);
-    c.font='600 29px system-ui';c.fillText(t[1],145,y+51);
-    p.btns.push({id:'side-'+t[2],x:52,y:y,w:266,h:104,fn:function(){openTab(t[2]==='jogos'?'jogos':'biblioteca')}});
-  });
-
-  // Cartões principais.
-  const cards=[
-    {id:'games',icon:'🎮',name:'Jogos',sub:'Entre nos seus jogos',fn:function(){openTab('jogos')},w:270},
-    {id:'apps',icon:'▦',name:'Aplicativos',sub:'Todos os aplicativos',fn:function(){openTab('biblioteca')},w:270},
-    {id:'settings',icon:'⚙',name:'Configurações',sub:'Personalize o sistema',fn:function(){openTab('config')},w:300},
-    {id:'store',icon:'▶',name:'Play Store',sub:'Loja de aplicativos',fn:function(){openTab('biblioteca')},w:270},
-    {id:'exit',icon:'⏻',name:'Sair',sub:'Fechar o menu',fn:function(){hideTabs()},w:250}
+  const apps=[
+    ['🎮','Jogos','jogos'],['▦','Biblioteca','biblioteca'],['⚙','Configurações','config'],
+    ['🌐','Navegador','biblioteca'],['🖼','Galeria','biblioteca'],['▶','Vídeos','biblioteca'],
+    ['🛍','Loja','biblioteca'],['★','Favoritos','favoritos']
   ];
-  let x=390;
-  cards.forEach(function(t){
-    const y=355,w=t.w,h=330,hv=p.hoverId==='qt-'+t.id;
-    rr(c,x,y,w,h,32);
-    if(hv){const g=c.createLinearGradient(x,y,x+w,y+h);g.addColorStop(0,'#087dff');g.addColorStop(1,'#344caa');c.fillStyle=g;c.fill();c.save();c.shadowColor='#159dff';c.shadowBlur=25;c.strokeStyle='#8cddff';c.lineWidth=4;c.stroke();c.restore()}
-    else{c.fillStyle='rgba(20,42,82,.9)';c.fill();c.strokeStyle='rgba(70,174,255,.85)';c.lineWidth=3;c.stroke()}
-    c.textAlign='center';c.textBaseline='middle';c.fillStyle='#fff';
-    c.font='100px system-ui';c.fillText(t.icon,x+w/2,y+112);
-    c.font='800 30px system-ui';c.fillText(t.name,x+w/2,y+220);
-    c.fillStyle='rgba(220,235,255,.8)';c.font='500 19px system-ui';c.fillText(t.sub,x+w/2,y+270);
-    p.btns.push({id:'qt-'+t.id,x:x,y:y,w:w,h:h,fn:t.fn});
-    x+=w+15;
+  apps.forEach(function(a,i){
+    const col=i%4,row=Math.floor(i/4),x=145+col*420,y=-20+row*165;
+    rr(c,x,y,380,145,28);c.fillStyle='rgba(40,58,76,.68)';c.fill();
+    c.strokeStyle='rgba(210,230,255,.10)';c.lineWidth=2;c.stroke();
+    c.textAlign='left';c.fillStyle='#fff';c.font='58px system-ui';c.fillText(a[0],x+28,y+52);
+    c.font='600 26px system-ui';c.fillText(a[1],x+110,y+52);
+    c.font='18px system-ui';c.fillStyle='rgba(235,243,250,.65)';c.fillText('Abrir aplicativo',x+110,y+96);
+    p.btns.push({id:'app-'+i,x:x,y:y,w:380,h:145,fn:function(){openTab(a[2])}});
   });
 
-  // Cartão informativo à direita.
-  rr(c,1665,310,220,390,32);c.fillStyle='rgba(15,37,78,.96)';c.fill();
-  c.strokeStyle='rgba(70,177,255,.85)';c.lineWidth=3;c.stroke();
-  c.textAlign='center';c.textBaseline='middle';c.fillStyle='#fff';
-  c.font='800 34px system-ui';c.fillText('META BOX',1775,385);
-  c.fillStyle='#c9dcff';c.font='600 28px system-ui';c.fillText('VR BOX WORLD',1775,440);
-  c.font='500 23px system-ui';c.fillText('Sua realidade',1775,525);c.fillText('em um novo nível!',1775,562);
-  c.fillStyle='#14aaff';rr(c,1700,630,150,7,4);c.fill();
+  // Campo de pesquisa comprido, como na referência.
+  rr(c,220,112,1510,165,38);
+  c.fillStyle='rgba(20,35,48,.82)';c.fill();
+  c.strokeStyle='rgba(255,255,255,.92)';c.lineWidth=4;c.stroke();
+  c.strokeStyle='#dce8ef';c.lineWidth=8;c.beginPath();c.arc(305,192,31,0,Math.PI*2);c.stroke();
+  c.beginPath();c.moveTo(328,215);c.lineTo(350,237);c.stroke();
+  c.textAlign='left';c.fillStyle='#e7edf2';c.font='600 54px system-ui';
+  c.fillText('Pesquisar aplicativos e jogos',380,197);
+  rr(c,1440,130,265,130,28);c.fillStyle='rgba(255,255,255,.10)';c.fill();
+  c.fillStyle='#fff';c.textAlign='center';c.font='700 40px system-ui';c.fillText('Procurar',1572,195);
+  p.btns.push({id:'search',x:220,y:112,w:1510,h:165,fn:function(){openTab('biblioteca')}});
 
-  // Barra inferior com atalhos.
-  rr(c,650,820,650,130,34);c.fillStyle='rgba(13,35,76,.96)';c.fill();
-  c.strokeStyle='rgba(65,172,255,.9)';c.lineWidth=3;c.stroke();
-  const bottom=[['●','Perfil','profile'],['♧','Notificações','notify'],['□','Tela cheia','fullscreen']];
-  bottom.forEach(function(t,i){
-    const bx=710+i*215;
-    c.textAlign='center';c.textBaseline='middle';c.fillStyle='#fff';
-    c.font='700 45px system-ui';c.fillText(t[0],bx,865);
-    c.font='500 17px system-ui';c.fillStyle='#cbdcff';c.fillText(t[1],bx,917);
-    p.btns.push({id:'bottom-'+t[2],x:bx-80,y:830,w:160,h:105,fn:function(){
-      if(t[2]==='profile'){recenter()}
-      else if(t[2]==='notify'){beep(880,.1,.1)}
-      else{try{if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen()}catch(e){}}
+  // Pequeno controle de janela central.
+  rr(c,770,425,380,82,40);c.fillStyle='rgba(0,0,0,.82)';c.fill();
+  c.fillStyle='#fff';c.textAlign='center';c.font='600 23px system-ui';c.fillText('Configurações   ·   ⠿   ·   Minimizar',960,466);
+  p.btns.push({id:'quick-settings',x:770,y:425,w:380,h:82,fn:function(){openTab('config')}});
+
+  // Barra universal inferior em formato de dock.
+  c.save();c.shadowColor='rgba(0,0,0,.45)';c.shadowBlur=24;
+  rr(c,15,570,1890,170,82);c.fillStyle='rgba(18,25,33,.94)';c.fill();
+  c.strokeStyle='rgba(220,235,245,.18)';c.lineWidth=3;c.stroke();c.restore();
+
+  const dock=[
+    ['👤','Perfil','profile'],['🔔','Avisos','notify'],['🌐','Web','web'],
+    ['🖼','Fotos','photos'],['⚙','Ajustes','settings'],['🎮','Jogos','games'],
+    ['🛍','Loja','store'],['▶','Vídeos','video'],['▦','Todos','all']
+  ];
+  dock.forEach(function(a,i){
+    const x=100+i*207;
+    const fills=['#266d67','#303a45','#5c4bb3','#168a80','#6d7480','#4c5b9c','#d83f82','#564ca5','#222b36'];
+    rr(c,x-53,595,106,105,26);c.fillStyle=fills[i];c.fill();
+    c.textAlign='center';c.fillStyle='#fff';c.font='54px system-ui';c.fillText(a[0],x,648);
+    if(i===0||i===1){c.font='17px system-ui';c.fillStyle='#e4edf2';c.fillText(a[1],x,718)}
+    p.btns.push({id:'dock-'+a[2],x:x-65,y:585,w:130,h:140,fn:function(){
+      if(a[2]==='profile')recenter();
+      else if(a[2]==='notify')beep(880,.1,.1);
+      else if(a[2]==='settings')openTab('config');
+      else if(a[2]==='games')openTab('jogos');
+      else if(a[2]==='all'||a[2]==='store')openTab('biblioteca');
+      else openTab('biblioteca');
     }});
   });
-  c.textAlign='center';c.fillStyle='rgba(190,215,255,.8)';c.font='500 20px system-ui';
-  c.fillText('Faça pinça com o polegar e o indicador para selecionar',960,1010);
+  c.fillStyle='rgba(255,255,255,.8)';c.textAlign='center';c.font='20px system-ui';
+  c.fillText('Faça pinça para selecionar • Segure a pinça da mão esquerda para abrir ou fechar',960,795);
 }
 tabsP.draw=drawTabs;
 function placeInFront(p,dist,y){
