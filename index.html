@@ -32,7 +32,7 @@ video#cam{position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-eve
     <li>Toque no botão, permita <b>câmera</b> e <b>sensores de movimento</b>.</li>
     <li>Coloque o celular deitado (paisagem) no VR Box, com a <b>câmera traseira livre</b>.</li>
     <li>Estenda as mãos na frente: você verá o esqueleto das suas mãos. <b>Pinça</b> (polegar + indicador) = clicar/pegar.</li>
-    <li><b>Segure a pinça</b> no vazio: um ícone aparece no dedo e, em 1 segundo, surgem as <b>abas</b> (Biblioteca, Jogos, Configurações).</li>
+    <li><b>Segure a pinça</b> no vazio por 1 segundo para abrir o menu flutuante. Faça pinça novamente por 1 segundo para fechar. O menu acompanha a direção da cabeça.</li>
     <li>Sem mãos? Olhe para um botão por 1,4 s para clicar.</li>
   </ul>
   <button id="go">ENTRAR NA REALIDADE VIRTUAL</button>
@@ -230,7 +230,7 @@ const GAMES=[
 const menuP=new Panel(1.8,1.125,1280,800);menuP.mesh.position.set(0,1.3,-1.75);
 const hudP=new Panel(0.9,0.3,900,300);hudP.mesh.position.set(-0.95,1.45,-1.25);hudP.mesh.rotation.y=0.65;
 const endP=new Panel(1.0,0.6,800,480);endP.mesh.position.set(0,1.35,-1.1);
-const tabsP=new Panel(1.375,0.2,1100,160);tabsP.mesh.visible=false;tabsP.tabsT=0;
+const tabsP=new Panel(1.95,0.34,1560,272);tabsP.mesh.visible=false;
 scene.add(menuP.mesh,hudP.mesh,endP.mesh,tabsP.mesh);
 
 function toggleBtn(p,c,id,y,label,key,hint){
@@ -325,16 +325,35 @@ function drawEnd(c,p){
 }
 endP.draw=drawEnd;
 /* barra de abas que aparece ao segurar a pinça */
+let batteryText='Bateria: indisponível';
+if(navigator.getBattery){
+  navigator.getBattery().then(function(b){
+    function updateBattery(){batteryText='Bateria: '+Math.round(b.level*100)+'%';tabsP.dirty=true}
+    updateBattery();b.addEventListener('levelchange',updateBattery);b.addEventListener('chargingchange',updateBattery);
+  }).catch(function(){});
+}
 function drawTabs(c,p){
-  rr(c,0,0,p.pw,p.ph,60);c.fillStyle=COL.bg;c.fill();c.strokeStyle='rgba(255,255,255,.2)';c.lineWidth=3;c.stroke();
-  const items=[['biblioteca','Biblioteca',250],['jogos','Jogos',200],['config','Configurações',280]];
-  let x=24;
+  rr(c,0,0,p.pw,p.ph,48);c.fillStyle='rgba(10,14,34,0.96)';c.fill();
+  c.strokeStyle='rgba(255,255,255,.24)';c.lineWidth=3;c.stroke();
+
+  // Faixa superior: informações rápidas no estilo do menu universal VR.
+  c.textBaseline='middle';c.textAlign='left';
+  c.fillStyle='#fff';c.font='700 30px system-ui';
+  c.fillText('●  Perfil',38,48);
+  c.fillStyle=COL.dim;c.font='600 27px system-ui';
+  c.fillText('Visitante',170,48);
+  c.fillText(new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),610,48);
+  c.fillText('🔋 '+batteryText,820,48);
+  c.fillText('●  Notificações: 0',1190,48);
+
+  const items=[['biblioteca','▦  Biblioteca',300],['jogos','▶  Jogos',260],['config','⚙  Configurações',340]];
+  let x=38;
   items.forEach(function(t){
-    B(p,c,'qt-'+t[0],x,40,t[2],80,t[1],function(){openTab(t[0])},{active:state==='menu'&&tab===t[0],font:'700 30px'});
-    x+=t[2]+16;
+    B(p,c,'qt-'+t[0],x,105,t[2],112,t[1],function(){openTab(t[0])},{active:state==='menu'&&tab===t[0],font:'700 32px'});
+    x+=t[2]+20;
   });
-  B(p,c,'qt-rec',x,40,150,80,'⌖',function(){recenter()},{font:'700 40px'});x+=166;
-  B(p,c,'qt-x',x,40,100,80,'✕',function(){hideTabs()},{font:'700 34px'});
+  B(p,c,'qt-rec',x,105,150,112,'⌖ Recentrar',function(){recenter()},{font:'700 27px'});x+=170;
+  B(p,c,'qt-x',x,105,110,112,'✕ Fechar',function(){hideTabs()},{font:'700 27px'});
 }
 tabsP.draw=drawTabs;
 function placeInFront(p,dist,y){
@@ -345,7 +364,7 @@ function placeInFront(p,dist,y){
   p.mesh.rotation.set(0,Math.atan2(-v.x,-v.z),0);
   p.mesh.updateMatrixWorld(true);
 }
-function showTabs(){placeInFront(tabsP,0.95,rig.position.y-0.08);tabsP.mesh.visible=true;tabsP.tabsT=10;tabsP.dirty=true;beep(880,0.08,0.12);buzz(25)}
+function showTabs(){placeInFront(tabsP,1.05,rig.position.y-0.08);tabsP.mesh.visible=true;tabsP.dirty=true;beep(880,0.08,0.12);buzz(25)}
 function hideTabs(){tabsP.mesh.visible=false}
 function openTab(t){tab=t;hideTabs();setState('menu');placeInFront(menuP,1.75,rig.position.y+0.1);menuP.dirty=true}
 
@@ -517,7 +536,7 @@ function interact(dt){
     const busy=!!(h.hit&&h.hit.btn)||!!h.holding;
     if(h.pinch&&!busy&&!h.lock){
       h.hold+=dt;
-      if(h.hold>=MENU_AT){h.lock=true;h.hold=0;showTabs()}
+      if(h.hold>=MENU_AT){h.lock=true;h.hold=0;if(tabsP.mesh.visible)hideTabs();else showTabs()}
     }else{h.hold=0;if(!h.pinch)h.lock=false}
   });
   hands.forEach(function(h){
@@ -682,7 +701,7 @@ function frame(t){
   if(state==='blocks')updateBlocks(dt);
   tapped=false;
   statT+=dt;if(statT>0.6){statT=0;if(state==='menu')menuP.dirty=true}
-  if(tabsP.mesh.visible){tabsP.tabsT-=dt;if(tabsP.tabsT<=0)hideTabs()}
+  if(tabsP.mesh.visible)placeInFront(tabsP,1.05,rig.position.y-0.08);
   [menuP,hudP,endP,tabsP].forEach(function(p){if(p.dirty&&p.mesh.visible)p.redraw()});
   render();
 }
